@@ -21,12 +21,12 @@ if (document.title === "Senate Congress 117" || document.title === "House Congre
     const tbody = document.querySelector(".tbody")
     const select = document.querySelector(".select")
     const form = document.getElementById("form")
-    
+
     let chamberName
     let chamberMembers
 
     // Selección de Cámara
-    
+
     if (document.title === "Senate Congress 117") {
         chamberName = `senate`
     }
@@ -52,6 +52,8 @@ if (document.title === "Senate Congress 117" || document.title === "House Congre
                 .then(request => request.json())
                 .then(data => chamberMembers = data.results[0].members)
 
+            buildFullName(chamberMembers)
+
             printTable(chamberMembers, tbody)
 
             const states = []
@@ -62,34 +64,29 @@ if (document.title === "Senate Congress 117" || document.title === "House Congre
 
             // Escucha de Formulario de Filtros y Chequeo de Valores - Ejecucion de Tabla Filtrada
 
-            let membersFiltered
-
             form.addEventListener(`change`, (e) => {
-                let checkValues = check()
-                if (checkValues.length === 0 && select.value === "All") {
-                    printTable(chamberMembers, tbody)
-                } else if (checkValues.length === 0) {
-                    membersFiltered = stateFilter(chamberMembers)
-                    printTable(membersFiltered, tbody)
-                } else {
-                    membersFiltered = partysFilter(chamberMembers, checkValues)
-                    membersFiltered = stateFilter(membersFiltered)
-                    printTable(membersFiltered, tbody)
-                }
-
-                // Control de Alerta de Tabla vacia
-
-                let alertContainer = document.querySelector(".alert-container")
-
-                if (tbody.childElementCount === 0) {
-                    alertContainer.classList = "alert-container"
-                } else {
-                    alertContainer.classList = "alert-container visually-hidden"
-                }
+                updateFilteredTable(chamberMembers)
             })
+
         }
         catch {
-            console.log(`malió sal`)
+            console.log(`Fetch request failed: Loading Chamber's JSONs`)
+
+            chamberName === 'house' ? chamberMembers = [...house.results[0].members] : chamberMembers = [...senate.results[0].members]
+
+            buildFullName(chamberMembers)
+
+            printTable(chamberMembers, tbody)
+
+            const states = []
+            chamberMembers.forEach(member => states.includes(member.state) ? `` : states.push(member.state))
+            states.sort()
+
+            selectOptions(states, select)
+
+            form.addEventListener(`change`, (e) => {
+                updateFilteredTable(chamberMembers)
+            })
         }
     }
 
@@ -97,6 +94,16 @@ if (document.title === "Senate Congress 117" || document.title === "House Congre
 
 
     // ------------------------------------------------- FUNCIONES --------------------------------------------------   
+
+    // Se arma el "nombre completo", y se devuelve como propiedad a cada objeto "miembro" de la cámara.
+
+    function buildFullName(chamber) {
+        for (member of chamber) {
+            let fullName = `${member.last_name}, ${member.first_name} ${member.middle_name || ""}`.trim()
+            member.full_name = fullName
+        }
+        return chamber
+    }
 
     // Impresión de la Tabla
 
@@ -112,7 +119,7 @@ if (document.title === "Senate Congress 117" || document.title === "House Congre
             link.setAttribute(`HREF`, member.url)
             link.setAttribute(`TARGET`, "_blank")
             link.classList = `link-dark fw-bold text-decoration-none member-name`
-            let aText = document.createTextNode(`${member.last_name}, ${member.first_name} ${member.middle_name ? member.middle_name : ""}`.trim())
+            let aText = document.createTextNode(member.full_name)
             link.appendChild(aText)
             name.appendChild(link)
             row.appendChild(name)
@@ -177,5 +184,31 @@ if (document.title === "Senate Congress 117" || document.title === "House Congre
     function stateFilter(membersToFilter) {
         let filteredByState = membersToFilter.filter(member => member.state === select.value || select.value === "All")
         return filteredByState
+    }
+
+    // Actualización de Tabla Filtrada
+
+    function updateFilteredTable(chamberMembers) {
+        let checkValues = check()
+        if (checkValues.length === 0 && select.value === "All") {
+            printTable(chamberMembers, tbody)
+        } else if (checkValues.length === 0) {
+            membersFiltered = stateFilter(chamberMembers)
+            printTable(membersFiltered, tbody)
+        } else {
+            membersFiltered = partysFilter(chamberMembers, checkValues)
+            membersFiltered = stateFilter(membersFiltered)
+            printTable(membersFiltered, tbody)
+        }
+
+        // Control de Alerta de Tabla vacia
+
+        let alertContainer = document.querySelector(".alert-container")
+
+        if (tbody.childElementCount === 0) {
+            alertContainer.classList = "alert-container"
+        } else {
+            alertContainer.classList = "alert-container visually-hidden"
+        }
     }
 }

@@ -71,7 +71,7 @@ async function getData() {
 
         totalVotesWithParty(chamberMembers)
 
-        fullName(chamberMembers)
+        buildFullName(chamberMembers)
 
         // Impresion de las Tablas
 
@@ -88,7 +88,36 @@ async function getData() {
 
     }
     catch {
-        console.log(`malió sal`)
+        console.log(`Fetch request failed: Loading Chamber's JSONs`)
+
+        chamberName === 'house' ? chamberMembers = [...house.results[0].members] : chamberMembers = [...senate.results[0].members]
+
+        statistics.parties.forEach((element, i) => {
+            statistics.parties[i].members = chamberMembers.filter(member => member.party === element.abb)
+            statistics.parties[i].averageVotes = averageOfVotes(statistics.parties[i].members).toFixed(2)
+        })
+
+        statistics.leastLoyals = leastTenPercent(chamberMembers, `votes_with_party_pct`)
+        statistics.mostLoyals = mostTenPercent(chamberMembers, `votes_with_party_pct`)
+        statistics.leastEngaged = mostTenPercent(chamberMembers, `missed_votes_pct`)
+        statistics.mostEngaged = leastTenPercent(chamberMembers, `missed_votes_pct`)
+
+        totalVotesWithParty(chamberMembers)
+
+        buildFullName(chamberMembers)
+
+        // Impresion de las Tablas
+
+        printTables(tbodyChamber, statistics.parties, `members`, `averageVotes`)
+
+        if (document.title === "House Attendance" || document.title === "Senate Attendance") {
+            printTables(tbodyLeast, statistics.leastEngaged, `missed_votes`, `missed_votes_pct`)
+            printTables(tbodyMost, statistics.mostEngaged, `missed_votes`, `missed_votes_pct`)
+        }
+        if (document.title === "House Loyalty" || document.title === "Senate Loyalty") {
+            printTables(tbodyLeast, statistics.leastLoyals, `total_votes_with_party`, `votes_with_party_pct`)
+            printTables(tbodyMost, statistics.mostLoyals, `total_votes_with_party`, `votes_with_party_pct`)
+        }
     }
 
 }
@@ -98,7 +127,7 @@ getData()
 
 // Se arma el "nombre completo", y se devuelve como propiedad a cada objeto "miembro" de la cámara.
 
-function fullName(chamber) {
+function buildFullName(chamber) {
     for (member of chamber) {
         let fullName = `${member.last_name}, ${member.first_name} ${member.middle_name || ""}`.trim()
         member.full_name = fullName
